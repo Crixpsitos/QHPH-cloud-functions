@@ -8,8 +8,16 @@
  */
 
 import {setGlobalOptions} from "firebase-functions";
-import {onRequest} from "firebase-functions/https";
-import * as logger from "firebase-functions/logger";
+import {
+  syncUserPreference,
+} from "./modules/users/triggers/eventInteraction.onWrite.syncUserPreference";
+import {
+  recalculateScoreAnalitycs,
+} from "./modules/events/triggers/event.onWrite.recalculateScoreAnalitycs";
+import {optimizeEventImages} from "./modules/events/storage/images.onObjectFinalized.optimizedImages";
+import {optimizeEventVideos} from "./modules/events/storage/videos.onObjectFinalized.optimizedVideos";
+import {cleanupOldMediaFiles} from "./modules/events/triggers/event.onWrite.cleanupOldMediaFiles";
+
 
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
@@ -24,9 +32,11 @@ import * as logger from "firebase-functions/logger";
 // functions should each use functions.runWith({ maxInstances: 10 }) instead.
 // In the v1 API, each function can only serve one request per container, so
 // this will be the maximum concurrent request count.
-setGlobalOptions({ maxInstances: 10 });
+setGlobalOptions({maxInstances: 10});
 
 // export const helloWorld = onRequest((request, response) => {
 //   logger.info("Hello logs!", {structuredData: true});
 //   response.send("Hello from Firebase!");
 // });
+
+export {syncUserPreference, recalculateScoreAnalitycs, optimizeEventImages, optimizeEventVideos, cleanupOldMediaFiles};
