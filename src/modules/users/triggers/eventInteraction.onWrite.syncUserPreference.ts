@@ -10,7 +10,7 @@ import {getEvent} from "../../events/helpers/getEvent";
 
 export const syncUserPreference = onDocumentWritten(
   {
-    document: "users/{userId}/interactions/events/{interactionId}",
+    document: "users/{userId}/eventInteractions/{interactionId}",
     database: "quehaypahacer-db",
   },
   async (event) => {
