@@ -14,9 +14,16 @@ import {
 import {
   recalculateScoreAnalitycs,
 } from "./modules/events/triggers/event.onWrite.recalculateScoreAnalitycs";
-import {optimizeEventImages} from "./modules/events/storage/images.onObjectFinalized.optimizedImages";
-import {optimizeEventVideos} from "./modules/events/storage/videos.onObjectFinalized.optimizedVideos";
+import {onObjectFinalizedOptimizeImages} from "./triggers/storage/onObjectFinalized.optimizeImages";
+import {onObjectFinalizedOptimizeVideos} from "./triggers/storage/onObjectFinalized.optimizeVideos";
+import {
+  optimizeMediaImages,
+  optimizeMediaVideos,
+} from "./triggers/storage/onObjectFinalized.optimizeMedia";
 import {cleanupOldMediaFiles} from "./modules/events/triggers/event.onWrite.cleanupOldMediaFiles";
+import {
+  syncSiteMarkerAndCleanupMedia,
+} from "./modules/sites/triggers/site.onWrite.syncMarkerAndCleanupMedia";
 
 
 // Start writing functions
@@ -39,4 +46,13 @@ setGlobalOptions({maxInstances: 10});
 //   response.send("Hello from Firebase!");
 // });
 
-export {syncUserPreference, recalculateScoreAnalitycs, optimizeEventImages, optimizeEventVideos, cleanupOldMediaFiles};
+export {
+  syncUserPreference,
+  recalculateScoreAnalitycs,
+  onObjectFinalizedOptimizeImages,
+  onObjectFinalizedOptimizeVideos,
+  optimizeMediaImages,
+  optimizeMediaVideos,
+  cleanupOldMediaFiles,
+  syncSiteMarkerAndCleanupMedia,
+};

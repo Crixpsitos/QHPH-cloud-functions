@@ -1,8 +1,8 @@
 import {logger} from "firebase-functions";
 import {onObjectFinalized} from "firebase-functions/storage";
 import path from "path";
-import {compressImage} from "../helpers/compressImage";
-import {db} from "../../../config/firebase";
+import {compressImage} from "../../modules/events/helpers/compressImage";
+import {db} from "../../config/firebase";
 import {FieldValue} from "firebase-admin/firestore";
 
 const VALID_CONTENT_TYPES = [
@@ -12,7 +12,7 @@ const VALID_CONTENT_TYPES = [
   "image/jpg",
 ];
 
-export const optimizeEventImages = onObjectFinalized(
+export const onObjectFinalizedOptimizeImages = onObjectFinalized(
   {
     memory: "1GiB",
     cpu: 1,
@@ -26,6 +26,7 @@ export const optimizeEventImages = onObjectFinalized(
 
     if (!contentType || !VALID_CONTENT_TYPES.includes(contentType)) return;
     if (filePath?.split("/")[0] !== "public") return;
+    if (filePath?.split("/")[1] !== "events") return;
     if (filePath?.split("/")[3] !== "images") return;
 
     const eventId = filePath?.split("/")[2];
@@ -73,7 +74,10 @@ export const optimizeEventImages = onObjectFinalized(
         await db.runTransaction(async (transaction) => {
           const docRef = db.doc(`events/${eventId}`);
           const doc = await transaction.get(docRef);
-          if (!doc.exists) throw new Error("Event does not exist");
+          if (!doc.exists) {
+            logger.warn(`Event ${eventId} does not exist, skipping.`);
+            return;
+          }
 
           const currentMedia = doc.data()?.media || [];
           const targetIndex = currentMedia.findIndex(
@@ -81,8 +85,8 @@ export const optimizeEventImages = onObjectFinalized(
           );
 
           if (targetIndex === -1) {
-            logger.warn(`No media item found for path: ${filePath}`);
-            throw new Error("Media not found");
+            logger.warn(`No media item found for path: ${filePath}, skipping.`);
+            return;
           }
 
           const mediaDataWithoutTemporaryUrl = {

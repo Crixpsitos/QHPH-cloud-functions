@@ -164,7 +164,7 @@ export const optimizedAndCreateVariants = async (
           destination: fullDestPath,
           metadata: {
             contentType: "image/webp",
-            cacheControl: "public, max-age=31536000",
+            cacheControl: "public, max-age=31536000, immutable",
             metadata: {
               process: "true",
               variant: suffix,

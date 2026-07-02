@@ -3,9 +3,9 @@ import {onObjectFinalized} from "firebase-functions/storage";
 import path from "path";
 import os from "os";
 import fs from "fs/promises";
-import {bucket, db} from "../../../config/firebase";
-import {processVideo} from "../helpers/processVideo";
-import {extractThumbnail} from "../helpers/extractThumbnail";
+import {bucket, db} from "../../config/firebase";
+import {processVideo} from "../../modules/events/helpers/processVideo";
+import {extractThumbnail} from "../../modules/events/helpers/extractThumbnail";
 
 const VALID_CONTENT_TYPES = [
   "video/mp4",
@@ -15,7 +15,7 @@ const VALID_CONTENT_TYPES = [
   "video/3gpp",
 ];
 
-export const optimizeEventVideos = onObjectFinalized(
+export const onObjectFinalizedOptimizeVideos = onObjectFinalized(
   {
     bucket: "quehaypahacer-develop.firebasestorage.app",
     region: "us-east1",
@@ -29,12 +29,11 @@ export const optimizeEventVideos = onObjectFinalized(
 
     if (!contentType || !VALID_CONTENT_TYPES.includes(contentType)) return;
     if (filePath?.split("/")[0] !== "public") return;
+    if (filePath?.split("/")[1] !== "events") return;
+    if (filePath?.split("/")[3] !== "videos") return;
 
     const eventId = filePath?.split("/")[2];
-    const subFolder = filePath?.split("/")[3];
-
     if (!eventId) return;
-    if (!subFolder || subFolder !== "videos") return;
 
     const fileName = path.basename(filePath);
     if (!fileName) return;
@@ -78,7 +77,7 @@ export const optimizeEventVideos = onObjectFinalized(
         destination: destVideo,
         metadata: {
           contentType: "video/mp4",
-          cacheControl: "public, max-age=31536000",
+          cacheControl: "public, max-age=31536000, immutable",
           metadata: {process: "true", original: filePath},
         },
       });
@@ -97,7 +96,7 @@ export const optimizeEventVideos = onObjectFinalized(
           destination: destThumb,
           metadata: {
             contentType: "image/jpeg",
-            cacheControl: "public, max-age=31536000",
+            cacheControl: "public, max-age=31536000, immutable",
           },
         });
         await uploadedThumb.makePublic();
@@ -110,10 +109,15 @@ export const optimizeEventVideos = onObjectFinalized(
         logger.warn("Thumbnail could not be uploaded, continuing...");
       }
 
+      let mediaFound = false;
+
       await db.runTransaction(async (transaction) => {
         const docRef = db.doc(`events/${eventId}`);
         const doc = await transaction.get(docRef);
-        if (!doc.exists) throw new Error("Event does not exist");
+        if (!doc.exists) {
+          logger.warn(`Event ${eventId} does not exist, skipping.`);
+          return;
+        }
 
         const currentMedia = doc.data()?.media || [];
 
@@ -122,9 +126,11 @@ export const optimizeEventVideos = onObjectFinalized(
         );
 
         if (targetIndex === -1) {
-          logger.warn(`No media item found for path: ${filePath}`);
-          throw new Error("Media not found");
+          logger.warn(`No media item found for path: ${filePath}, skipping.`);
+          return;
         }
+
+        mediaFound = true;
 
         const mediaDataWithoutTemporaryUrl = {
           ...currentMedia[targetIndex].data,
@@ -146,6 +152,8 @@ export const optimizeEventVideos = onObjectFinalized(
 
         transaction.update(docRef, {media: currentMedia});
       });
+
+      if (!mediaFound) return;
 
       logger.info(`✅ Video ready: ${videoUrl}`);
     } catch (error) {
