@@ -12,18 +12,34 @@ import {
   syncUserPreference,
 } from "./modules/users/triggers/eventInteraction.onWrite.syncUserPreference";
 import {
+  optimizeProfileMedia,
+} from "./modules/users/triggers/profile.onFinalized.optimizeProfileMedia";
+import {
   recalculateScoreAnalitycs,
 } from "./modules/events/triggers/event.onWrite.recalculateScoreAnalitycs";
+import {
+  aggregateSessionAnalytics,
+} from "./modules/events/triggers/session.onWrite.aggregateSessionAnalytics";
+import {
+  recalculateSessionScore,
+} from "./modules/events/triggers/session.onWrite.recalculateSessionScore";
 import {onObjectFinalizedOptimizeImages} from "./triggers/storage/onObjectFinalized.optimizeImages";
 import {onObjectFinalizedOptimizeVideos} from "./triggers/storage/onObjectFinalized.optimizeVideos";
 import {
   optimizeMediaImages,
   optimizeMediaVideos,
 } from "./triggers/storage/onObjectFinalized.optimizeMedia";
+import {
+  optimizeSessionImages,
+  optimizeSessionVideos,
+} from "./triggers/storage/onObjectFinalized.optimizeSessions";
 import {cleanupOldMediaFiles} from "./modules/events/triggers/event.onWrite.cleanupOldMediaFiles";
 import {
   syncSiteMarkerAndCleanupMedia,
 } from "./modules/sites/triggers/site.onWrite.syncMarkerAndCleanupMedia";
+import {
+  cascadeDeleteEventInteractions,
+} from "./modules/events/triggers/event.onDelete.cascadeDeleteInteractions";
 
 
 // Start writing functions
@@ -48,11 +64,17 @@ setGlobalOptions({maxInstances: 10});
 
 export {
   syncUserPreference,
+  optimizeProfileMedia,
   recalculateScoreAnalitycs,
+  aggregateSessionAnalytics,
+  recalculateSessionScore,
   onObjectFinalizedOptimizeImages,
   onObjectFinalizedOptimizeVideos,
   optimizeMediaImages,
   optimizeMediaVideos,
+  optimizeSessionImages,
+  optimizeSessionVideos,
   cleanupOldMediaFiles,
   syncSiteMarkerAndCleanupMedia,
+  cascadeDeleteEventInteractions,
 };

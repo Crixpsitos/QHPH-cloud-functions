@@ -57,15 +57,26 @@ export const calculateTrendingScore = (event: Events) => {
     logger.info("[calculateTrendingScore] Decay factor", {decayFactor});
 
     const views = event.analytics?.views ?? 0;
-    const shares = event.analytics?.shares ?? 0;
-    const registrations = event.analytics?.registrations ?? 0;
     const likes = event.analytics?.likes ?? 0;
+
+    // Multi-date: registros y shares ocurren en las FECHAS, no en el evento.
+    // `aggregateSessionAnalytics` los agrega en `session*` y aquí se suman a los
+    // propios del evento (que en multi-date son 0). Sumar no infla: registrarse
+    // a 2 fechas son 2 demandas reales. El like NO se agrega: es el estado de
+    // una persona y contaría dos veces al mismo uid.
+    const shares =
+      (event.analytics?.shares ?? 0) + (event.analytics?.sessionShares ?? 0);
+    const registrations =
+      (event.analytics?.registrations ?? 0) +
+      (event.analytics?.sessionRegistrations ?? 0);
 
     logger.info("[calculateTrendingScore] Métricas del evento", {
       views,
       shares,
       registrations,
       likes,
+      sessionShares: event.analytics?.sessionShares ?? 0,
+      sessionRegistrations: event.analytics?.sessionRegistrations ?? 0,
       isPromoted: event.promotion?.isPromoted,
     });
 

@@ -7,6 +7,7 @@ import os from "os";
 
 export const compressImage = async (
   filePath: string,
+  options?: {maxWidth?: number; quality?: number},
 ): Promise<{
   publicUrl: string;
   path: string;
@@ -29,12 +30,12 @@ export const compressImage = async (
     const infoInfo = await sharp(tempInput)
       .rotate()
       .resize({
-        width: 1200,
+        width: options?.maxWidth ?? 1200,
         withoutEnlargement: true,
         fit: "inside",
       })
       .webp({
-        quality: 80,
+        quality: options?.quality ?? 80,
         effort: 4,
         smartSubsample: true,
       })

@@ -28,7 +28,32 @@ export const cleanupOldMediaFiles = onDocumentWritten(
     const before = documentEvent.data?.before.data();
     const after = documentEvent.data?.after.data();
 
-    if (!before || !after) return;
+    if (!before) return;
+
+    // Evento eliminado: borrar TODOS los archivos del snapshot anterior.
+    if (!after) {
+      const allPaths: string[] = [];
+      const media: MediaItem[] = before.media || [];
+      for (const item of media) {
+        if (item.data?.path) allPaths.push(item.data.path);
+        if (item.data?.thumbnailPath) allPaths.push(item.data.thumbnailPath);
+      }
+      const mainImg: MainImage = before.mainImage;
+      if (mainImg?.path) allPaths.push(mainImg.path);
+
+      if (allPaths.length === 0) return;
+      logger.info(`🗑 Evento eliminado — borrando ${allPaths.length} archivos`, {allPaths});
+      await Promise.all(
+        allPaths.map(async (p) => {
+          try {
+            await bucket.file(p).delete();
+          } catch {
+            logger.warn(`⚠️ No se pudo eliminar (puede que ya no exista): ${p}`);
+          }
+        }),
+      );
+      return;
+    }
 
     const pathsToDelete: string[] = [];
 

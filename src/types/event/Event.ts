@@ -39,5 +39,15 @@ export interface Events extends Date {
     shares?: number;
     registrations?: number;
     score?: number;
+    /**
+     * Agregados de la subcolección `sessions` (multi-date), escritos por
+     * `aggregateSessionAnalytics`. Van SEPARADOS de los contadores propios del
+     * evento para no perder de dónde vino cada número.
+     *
+     * Solo acciones: no hay `sessionLikes` porque el like es del evento (el mismo
+     * usuario dando like al evento y a una fecha contaría dos veces).
+     */
+    sessionRegistrations?: number;
+    sessionShares?: number;
   };
 }

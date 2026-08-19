@@ -46,9 +46,18 @@ export const recalculateScoreAnalitycs = onDocumentWritten(
         path: eventRef.path,
       });
 
+      // Normaliza Timestamps a millis: comparar objetos Timestamp con !== siempre
+      // da "distinto" (referencias) y provocaría un bucle de recálculo.
+      const normalize = (v: unknown) => {
+        if (v && typeof (v as {toMillis?: unknown}).toMillis === "function") {
+          return (v as {toMillis: () => number}).toMillis();
+        }
+        return v;
+      };
+
       const relevantChanged = SCORE_RELEVANT_FIELDS.some((field) => {
-        const beforeValue = getNestedValue(before ?? {}, field);
-        const afterValue = getNestedValue(after ?? {}, field);
+        const beforeValue = normalize(getNestedValue(before ?? {}, field));
+        const afterValue = normalize(getNestedValue(after ?? {}, field));
         const changed = beforeValue !== afterValue;
         if (changed) {
           logger.info(
