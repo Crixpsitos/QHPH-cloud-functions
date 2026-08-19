@@ -23,6 +23,9 @@ import {
 import {
   recalculateSessionScore,
 } from "./modules/events/triggers/session.onWrite.recalculateSessionScore";
+import {
+  cleanupSessionMedia,
+} from "./modules/events/triggers/session.onDelete.cleanupSessionMedia";
 import {onObjectFinalizedOptimizeImages} from "./triggers/storage/onObjectFinalized.optimizeImages";
 import {onObjectFinalizedOptimizeVideos} from "./triggers/storage/onObjectFinalized.optimizeVideos";
 import {
@@ -37,6 +40,9 @@ import {cleanupOldMediaFiles} from "./modules/events/triggers/event.onWrite.clea
 import {
   syncSiteMarkerAndCleanupMedia,
 } from "./modules/sites/triggers/site.onWrite.syncMarkerAndCleanupMedia";
+import {
+  cascadeDeleteSiteInteractions,
+} from "./modules/sites/triggers/site.onDelete.cascadeDeleteSiteInteractions";
 import {
   cascadeDeleteEventInteractions,
 } from "./modules/events/triggers/event.onDelete.cascadeDeleteInteractions";
@@ -68,6 +74,7 @@ export {
   recalculateScoreAnalitycs,
   aggregateSessionAnalytics,
   recalculateSessionScore,
+  cleanupSessionMedia,
   onObjectFinalizedOptimizeImages,
   onObjectFinalizedOptimizeVideos,
   optimizeMediaImages,
@@ -76,5 +83,6 @@ export {
   optimizeSessionVideos,
   cleanupOldMediaFiles,
   syncSiteMarkerAndCleanupMedia,
+  cascadeDeleteSiteInteractions,
   cascadeDeleteEventInteractions,
 };

@@ -10,14 +10,6 @@ interface SessionData {
   };
 }
 
-/**
- * Calcula el trending score de una sesión.
- *
- * Igual que calculateTrendingScore para eventos pero sin likes (son del evento
- * padre, no de la sesión) y sin bonus de promoción.
- *
- * Retorna 0 si la sesión ya pasó (startDate en el pasado).
- */
 export const calculateSessionScore = (session: SessionData): number => {
   try {
     const now = Date.now();

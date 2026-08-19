@@ -23,7 +23,9 @@ interface ProfilePathInfo {
 }
 
 /**
- * Parsea la ruta y devuelve null si no corresponde a una imagen de perfil subida por el usuario.
+ * Extrae uid, subcarpeta y nombre de archivo desde una ruta de profile en Storage.
+ * @param {string | undefined} filePath Ruta del archivo en Storage.
+ * @return {ProfilePathInfo | null} Metadatos parseados o null si no coincide.
  */
 function parseProfilePath(filePath: string | undefined): ProfilePathInfo | null {
   const parts = filePath?.split("/") ?? [];
@@ -36,22 +38,11 @@ function parseProfilePath(filePath: string | undefined): ProfilePathInfo | null 
   if (subFolder !== "avatar" && subFolder !== "banner") return null;
 
   const fileName = path.basename(filePath as string);
-  // Evita bucle: el archivo ya optimizado no se reprocesa.
-  if (!fileName || fileName.startsWith("optimized_")) return null;
+
 
   return {uid, subFolder, fileName};
 }
 
-/**
- * Optimiza imágenes de perfil (avatar y banner) al subirse a Storage.
- *
- * Avatar  → redimensiona a máx 400 px, convierte a WebP, actualiza Firestore + Firebase Auth.
- * Banner  → convierte a WebP (ya recortado a 1500×500 por el cliente), actualiza Firestore.
- *
- * Tras la optimización elimina el archivo original (best-effort).
- * El documento Firestore pasa de la URL original a la URL optimizada en background;
- * el cliente ya muestra el blob local mientras tanto.
- */
 export const optimizeProfileMedia = onObjectFinalized(
   {
     memory: "512MiB",
@@ -72,8 +63,6 @@ export const optimizeProfileMedia = onObjectFinalized(
     const {uid, subFolder} = info;
     logger.info("[optimizeProfileMedia] Iniciando", {uid, subFolder, filePath});
 
-    // Avatar: recorta a 400 px para no servir fotos de 5 MB a 80 px.
-    // Banner: mantiene 1500 px (ya recortado por el cliente), sólo convierte a WebP.
     const maxWidth = subFolder === "avatar" ? 400 : 1500;
 
     try {
@@ -90,7 +79,6 @@ export const optimizeProfileMedia = onObjectFinalized(
           imagePath: compressedPath,
           updatedAt: FieldValue.serverTimestamp(),
         });
-        // Sincroniza también el perfil de Firebase Auth para que el token refleje la nueva foto.
         await getAuth().updateUser(uid, {photoURL: publicUrl});
       } else {
         await userRef.update({
@@ -100,7 +88,6 @@ export const optimizeProfileMedia = onObjectFinalized(
         });
       }
 
-      // Eliminar el archivo original una vez optimizado (best-effort).
       await bucket.file(filePath).delete().catch((err) => {
         logger.warn("[optimizeProfileMedia] No se pudo eliminar el original", {
           filePath,

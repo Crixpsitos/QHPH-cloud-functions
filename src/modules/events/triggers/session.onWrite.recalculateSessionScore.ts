@@ -5,19 +5,6 @@ import {getNestedValue} from "../../../utils/getNestedValue";
 import {SESSION_SCORE_RELEVANT_FIELDS} from "../../../const/SESSION_SCORE_RELEVANT_FIELDS";
 import {calculateSessionScore} from "../../../utils/calculateSessionScore";
 
-/**
- * Recalcula analytics.score de una sesión cuando cambia algún campo relevante.
- *
- * Sin bucle: escribe analytics.score y updatedAt en la sesión, pero ninguno
- * de esos campos está en SESSION_SCORE_RELEVANT_FIELDS, así que el segundo
- * disparo del trigger detecta relevantChanged = false y retorna de inmediato.
- *
- * Sin colisión con aggregateSessionAnalytics: ese trigger lee registrations y
- * shares (no score), y su corte de idempotencia lo detiene si nada cambió.
- *
- * Las sesiones no tienen likes: el like vive en el evento padre (un mismo usuario
- * dando like al evento y a una fecha contaría dos veces).
- */
 export const recalculateSessionScore = onDocumentWritten(
   {
     document: "events/{eventId}/sessions/{sessionId}",
@@ -31,7 +18,6 @@ export const recalculateSessionScore = onDocumentWritten(
       const after = documentEvent.data?.after.data();
 
       if (!after) {
-        // Sesión eliminada: cascadeDeleteEventInteractions o borrado manual.
         logger.info("[recalculateSessionScore] Sesión eliminada, omitiendo", {
           sessionId,
           eventId,
@@ -45,7 +31,6 @@ export const recalculateSessionScore = onDocumentWritten(
         return;
       }
 
-      // Normaliza Timestamps a millis para comparar por valor, no por referencia.
       const normalize = (v: unknown) => {
         if (v && typeof (v as {toMillis?: unknown}).toMillis === "function") {
           return (v as {toMillis: () => number}).toMillis();

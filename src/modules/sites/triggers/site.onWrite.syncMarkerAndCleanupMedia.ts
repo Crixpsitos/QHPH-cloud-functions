@@ -40,7 +40,33 @@ export const syncSiteMarkerAndCleanupMedia = onDocumentWritten(
     const after = documentEvent.data?.after.data();
     const siteId = documentEvent.params.siteId;
 
-    if (!before || !after) return;
+    if (!before) return;
+
+    // Site eliminado: borrar TODOS los archivos del snapshot anterior.
+    if (!after) {
+      const allPaths: string[] = [];
+      const media: MediaItem[] = before.media || [];
+      for (const item of media) {
+        if (item.path) allPaths.push(item.path);
+        if (item.thumbnailPath) allPaths.push(item.thumbnailPath);
+        if (item.markerUrl?.path) allPaths.push(item.markerUrl.path);
+      }
+      const mainImg: MainImage = before.mainImage;
+      if (mainImg?.path) allPaths.push(mainImg.path);
+
+      if (allPaths.length === 0) return;
+      logger.info(`🗑 Site eliminado — borrando ${allPaths.length} archivos`, {siteId, allPaths});
+      await Promise.all(
+        allPaths.map(async (p) => {
+          try {
+            await bucket.file(p).delete();
+          } catch {
+            logger.warn(`⚠️ No se pudo eliminar (puede que ya no exista): ${p}`);
+          }
+        }),
+      );
+      return;
+    }
 
     const beforeMedia: MediaItem[] = before.media || [];
     const afterMedia: MediaItem[] = after.media || [];

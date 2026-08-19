@@ -4,6 +4,7 @@ import {getNestedValue} from "../../../utils/getNestedValue";
 import {SCORE_RELEVANT_FIELDS} from "../../../const/SCORE_RELEVANT_FIELDS";
 import {calculateTrendingScore} from "../../../utils/calculateTrendingScore";
 import {logger} from "firebase-functions";
+import type {Events} from "../../../types/event/Event";
 
 export const recalculateScoreAnalitycs = onDocumentWritten(
   {
@@ -92,7 +93,7 @@ export const recalculateScoreAnalitycs = onDocumentWritten(
           "[recalculateScoreAnalitycs] El objeto after no tiene propiedad 'event'",
         );
         // Probablemente 'after' es el evento directo, no tiene un campo 'event'
-        const score = calculateTrendingScore(after as any);
+        const score = calculateTrendingScore(after as Events);
         logger.info(
           "[recalculateScoreAnalitycs] Score calculado (usando after directo):",
           {
