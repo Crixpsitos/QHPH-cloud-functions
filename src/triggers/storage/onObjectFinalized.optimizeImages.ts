@@ -4,6 +4,7 @@ import path from "path";
 import {compressImage} from "../../modules/events/helpers/compressImage";
 import {db} from "../../config/firebase";
 import {FieldValue} from "firebase-admin/firestore";
+import {STORAGE_BUCKET} from "../../config/bucket";
 
 const VALID_CONTENT_TYPES = [
   "image/jpeg",
@@ -17,7 +18,7 @@ export const onObjectFinalizedOptimizeImages = onObjectFinalized(
     memory: "1GiB",
     cpu: 1,
     concurrency: 10,
-    bucket: "quehaypahacer-develop.firebasestorage.app",
+    bucket: STORAGE_BUCKET,
     region: "us-east1",
     retry: true,
   },

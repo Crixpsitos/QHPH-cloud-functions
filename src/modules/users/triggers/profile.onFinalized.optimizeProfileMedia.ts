@@ -5,6 +5,7 @@ import {FieldValue} from "firebase-admin/firestore";
 import {getAuth} from "firebase-admin/auth";
 import {bucket, db} from "../../../config/firebase";
 import {compressImage} from "../../events/helpers/compressImage";
+import {STORAGE_BUCKET} from "../../../config/bucket";
 
 const VALID_IMAGE_TYPES = [
   "image/jpeg",
@@ -48,7 +49,7 @@ export const optimizeProfileMedia = onObjectFinalized(
     memory: "512MiB",
     cpu: 1,
     concurrency: 5,
-    bucket: "quehaypahacer-develop.firebasestorage.app",
+    bucket: STORAGE_BUCKET,
     region: "us-east1",
     retry: true,
   },

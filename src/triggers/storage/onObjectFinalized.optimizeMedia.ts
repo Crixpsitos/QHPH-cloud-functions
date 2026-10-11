@@ -8,6 +8,7 @@ import {compressImage} from "../../modules/events/helpers/compressImage";
 import {processVideo} from "../../modules/events/helpers/processVideo";
 import {extractThumbnail} from "../../modules/events/helpers/extractThumbnail";
 import {isOptimizableFolder} from "./config/storageOptimization.config";
+import {STORAGE_BUCKET} from "../../config/bucket";
 
 /**
  * Optimizador genérico de media (imágenes + videos) para el estándar de sites:
@@ -129,7 +130,7 @@ export const optimizeMediaImages = onObjectFinalized(
     memory: "1GiB",
     cpu: 1,
     concurrency: 10,
-    bucket: "quehaypahacer-develop.firebasestorage.app",
+    bucket: STORAGE_BUCKET,
     region: "us-east1",
     retry: true,
   },
@@ -182,7 +183,7 @@ export const optimizeMediaImages = onObjectFinalized(
 
 export const optimizeMediaVideos = onObjectFinalized(
   {
-    bucket: "quehaypahacer-develop.firebasestorage.app",
+    bucket: STORAGE_BUCKET,
     region: "us-east1",
     retry: true,
     memory: "2GiB",

@@ -9,7 +9,10 @@ if (admin.apps.length) {
   try {
     app = admin.initializeApp({
       credential: admin.credential.applicationDefault(),
-      storageBucket: "quehaypahacer-develop.firebasestorage.app",
+      // Proyecto actual (GCLOUD_PROJECT lo define Cloud Functions); develop como respaldo local.
+      storageBucket: process.env.GCLOUD_PROJECT ?
+        `${process.env.GCLOUD_PROJECT}.firebasestorage.app` :
+        "quehaypahacer-develop.firebasestorage.app",
     });
   } catch {
     app = admin.initializeApp();

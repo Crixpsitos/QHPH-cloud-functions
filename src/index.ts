@@ -18,6 +18,9 @@ import {
   expirePremiumPlans,
 } from "./modules/users/triggers/schedule.expirePremiumPlans";
 import {
+  notifyNewReport,
+} from "./modules/reports/triggers/report.onCreate.notifyNewReport";
+import {
   recalculateScoreAnalitycs,
 } from "./modules/events/triggers/event.onWrite.recalculateScoreAnalitycs";
 import {
@@ -75,6 +78,7 @@ export {
   syncUserPreference,
   optimizeProfileMedia,
   expirePremiumPlans,
+  notifyNewReport,
   recalculateScoreAnalitycs,
   aggregateSessionAnalytics,
   recalculateSessionScore,

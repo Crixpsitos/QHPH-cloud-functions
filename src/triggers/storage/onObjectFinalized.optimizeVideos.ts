@@ -6,6 +6,7 @@ import fs from "fs/promises";
 import {bucket, db} from "../../config/firebase";
 import {processVideo} from "../../modules/events/helpers/processVideo";
 import {extractThumbnail} from "../../modules/events/helpers/extractThumbnail";
+import {STORAGE_BUCKET} from "../../config/bucket";
 
 const VALID_CONTENT_TYPES = [
   "video/mp4",
@@ -17,7 +18,7 @@ const VALID_CONTENT_TYPES = [
 
 export const onObjectFinalizedOptimizeVideos = onObjectFinalized(
   {
-    bucket: "quehaypahacer-develop.firebasestorage.app",
+    bucket: STORAGE_BUCKET,
     region: "us-east1",
     retry: true,
     memory: "2GiB",
