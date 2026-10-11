@@ -59,6 +59,8 @@ export const optimizeProfileMedia = onObjectFinalized(
 
     const info = parseProfilePath(filePath);
     if (!info) return;
+    // Sin esto la función se re-dispara sobre su propia salida (optimized_optimized_…).
+    if (info.fileName.startsWith("optimized_")) return;
 
     const {uid, subFolder} = info;
     logger.info("[optimizeProfileMedia] Iniciando", {uid, subFolder, filePath});

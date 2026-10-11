@@ -6,14 +6,6 @@ import type {DocumentReference, Query} from "firebase-admin/firestore";
 const BATCH_SIZE = 500;
 
 /**
-/**
- * Elimina un lote de referencias en un batch de Firestore.
- * @param {DocumentReference[]} refs Referencias de documentos a eliminar.
- */
- * Elimina un conjunto de referencias en un WriteBatch.
- * @param {DocumentReference[]} refs - Array de referencias de documentos a eliminar.
- */
-/**
  * Elimina un conjunto de referencias en un WriteBatch.
  * @param {DocumentReference[]} refs Array de referencias de documentos a eliminar.
  */

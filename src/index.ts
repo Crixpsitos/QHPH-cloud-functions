@@ -15,6 +15,9 @@ import {
   optimizeProfileMedia,
 } from "./modules/users/triggers/profile.onFinalized.optimizeProfileMedia";
 import {
+  expirePremiumPlans,
+} from "./modules/users/triggers/schedule.expirePremiumPlans";
+import {
   recalculateScoreAnalitycs,
 } from "./modules/events/triggers/event.onWrite.recalculateScoreAnalitycs";
 import {
@@ -71,6 +74,7 @@ setGlobalOptions({maxInstances: 10});
 export {
   syncUserPreference,
   optimizeProfileMedia,
+  expirePremiumPlans,
   recalculateScoreAnalitycs,
   aggregateSessionAnalytics,
   recalculateSessionScore,
