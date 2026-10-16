@@ -47,6 +47,9 @@ import {
   syncSiteMarkerAndCleanupMedia,
 } from "./modules/sites/triggers/site.onWrite.syncMarkerAndCleanupMedia";
 import {
+  notifySiteModeration,
+} from "./modules/sites/triggers/site.onWrite.notifyModeration";
+import {
   cascadeDeleteSiteInteractions,
 } from "./modules/sites/triggers/site.onDelete.cascadeDeleteSiteInteractions";
 import {
@@ -91,6 +94,7 @@ export {
   optimizeSessionVideos,
   cleanupOldMediaFiles,
   syncSiteMarkerAndCleanupMedia,
+  notifySiteModeration,
   cascadeDeleteSiteInteractions,
   cascadeDeleteEventInteractions,
 };
