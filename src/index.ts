@@ -50,6 +50,9 @@ import {
   notifySiteModeration,
 } from "./modules/sites/triggers/site.onWrite.notifyModeration";
 import {
+  notifyEventChanges,
+} from "./modules/events/triggers/event.onWrite.notifyChanges";
+import {
   cascadeDeleteSiteInteractions,
 } from "./modules/sites/triggers/site.onDelete.cascadeDeleteSiteInteractions";
 import {
@@ -95,6 +98,7 @@ export {
   cleanupOldMediaFiles,
   syncSiteMarkerAndCleanupMedia,
   notifySiteModeration,
+  notifyEventChanges,
   cascadeDeleteSiteInteractions,
   cascadeDeleteEventInteractions,
 };
