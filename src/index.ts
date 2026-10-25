@@ -50,6 +50,9 @@ import {
   notifySiteModeration,
 } from "./modules/sites/triggers/site.onWrite.notifyModeration";
 import {
+  recomputeSiteEvents,
+} from "./modules/sites/triggers/schedule.recomputeSiteEvents";
+import {
   notifyEventChanges,
 } from "./modules/events/triggers/event.onWrite.notifyChanges";
 import {
@@ -84,6 +87,7 @@ export {
   syncUserPreference,
   optimizeProfileMedia,
   expirePremiumPlans,
+  recomputeSiteEvents,
   notifyNewReport,
   recalculateScoreAnalitycs,
   aggregateSessionAnalytics,
