@@ -2,6 +2,7 @@ import {onDocumentWritten} from "firebase-functions/firestore";
 import {logger} from "firebase-functions";
 import {bucket, db} from "../../../config/firebase";
 import {createMarkerImage} from "../helpers/createMarkerImage";
+import {applyMarker} from "../helpers/markerMedia";
 
 interface MediaData {
   path: string;
@@ -92,13 +93,17 @@ export const syncSiteMarkerAndCleanupMedia = onDocumentWritten(
           );
           const {publicUrl, storagePath} = await createMarkerImage(coverPath, siteId);
 
-          const updatedMedia = afterMedia.map((item, index) => ({
-            ...item,
-            markerUrl: index === afterCoverIndex ? {url: publicUrl, path: storagePath} : null,
-          }));
-
-          await db.doc(`sites/${siteId}`).update({
-            media: updatedMedia,
+          // Transacción sobre el media FRESCO: escribir el `afterMedia` de este evento pisaba
+          // lo que el optimizador de imágenes guardó entretanto (ítems vueltos a "processing").
+          const siteRef = db.doc(`sites/${siteId}`);
+          await db.runTransaction(async (tx) => {
+            const fresh: MediaItem[] = (await tx.get(siteRef)).data()?.media || [];
+            const next = applyMarker(
+              fresh,
+              {id: afterCoverItem.id, path: coverPath},
+              {url: publicUrl, path: storagePath},
+            );
+            if (next) tx.update(siteRef, {media: next});
           });
           logger.info(`✅ markerUrl updated in cover item for site ${siteId}`);
         } catch (error) {
@@ -110,11 +115,12 @@ export const syncSiteMarkerAndCleanupMedia = onDocumentWritten(
       }
     } else if (!afterCoverItem && beforeCoverItem) {
       logger.info(`🗺 Cover removed for site ${siteId}, clearing markerUrl in media`);
-      const updatedMedia = afterMedia.map((item) => ({
-        ...item,
-        markerUrl: null,
-      }));
-      await db.doc(`sites/${siteId}`).update({media: updatedMedia});
+      const siteRef = db.doc(`sites/${siteId}`);
+      await db.runTransaction(async (tx) => {
+        const fresh: MediaItem[] = (await tx.get(siteRef)).data()?.media || [];
+        const next = applyMarker(fresh, null, null);
+        if (next) tx.update(siteRef, {media: next});
+      });
     }
 
     // ─────────────────────────────────────────────────────────────────────────
