@@ -2,6 +2,7 @@ import {logger} from "firebase-functions";
 import {onObjectFinalized} from "firebase-functions/storage";
 import path from "path";
 import {compressImage} from "../../modules/events/helpers/compressImage";
+import {EVENT_IMAGE_OPTIONS} from "../../modules/events/helpers/encodeWebp";
 import {db} from "../../config/firebase";
 import {FieldValue} from "firebase-admin/firestore";
 import {STORAGE_BUCKET} from "../../config/bucket";
@@ -49,7 +50,7 @@ export const onObjectFinalizedOptimizeImages = onObjectFinalized(
         const {
           publicUrl,
           path: compressedPath,
-        } = await compressImage(filePath);
+        } = await compressImage(filePath, EVENT_IMAGE_OPTIONS);
 
         await db.doc(`events/${eventId}`).update({
           "mainImage.status": "ready",
@@ -75,7 +76,7 @@ export const onObjectFinalizedOptimizeImages = onObjectFinalized(
           path: compressedPath,
           width,
           height,
-        } = await compressImage(filePath);
+        } = await compressImage(filePath, EVENT_IMAGE_OPTIONS);
 
         await patchEventMedia({
           db,

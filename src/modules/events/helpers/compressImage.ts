@@ -1,13 +1,13 @@
 import {logger} from "firebase-functions";
 import fs from "fs/promises";
 import path from "path";
-import sharp from "sharp";
 import {bucket} from "../../../config/firebase";
 import os from "os";
+import {webpPipeline, type WebpOptions} from "./encodeWebp";
 
 export const compressImage = async (
   filePath: string,
-  options?: {maxWidth?: number; quality?: number},
+  options?: Partial<WebpOptions>,
 ): Promise<{
   publicUrl: string;
   path: string;
@@ -27,19 +27,11 @@ export const compressImage = async (
   try {
     await bucket.file(filePath).download({destination: tempInput});
 
-    const infoInfo = await sharp(tempInput)
-      .rotate()
-      .resize({
-        width: options?.maxWidth ?? 1200,
-        withoutEnlargement: true,
-        fit: "inside",
-      })
-      .webp({
-        quality: options?.quality ?? 80,
-        effort: 4,
-        smartSubsample: true,
-      })
-      .toFile(tempOutput);
+    const infoInfo = await webpPipeline(tempInput, {
+      maxWidth: options?.maxWidth ?? 1200,
+      quality: options?.quality ?? 80,
+      effort: options?.effort ?? 4,
+    }).toFile(tempOutput);
 
     const uploadedFile = bucket.file(destinationPath);
 
