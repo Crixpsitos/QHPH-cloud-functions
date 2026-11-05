@@ -5,6 +5,10 @@ import {compressImage} from "../../modules/events/helpers/compressImage";
 import {db} from "../../config/firebase";
 import {FieldValue} from "firebase-admin/firestore";
 import {STORAGE_BUCKET} from "../../config/bucket";
+import {
+  patchEventMedia,
+  MediaNotPersistedError,
+} from "../../modules/events/helpers/patchEventMedia";
 
 const VALID_CONTENT_TYPES = [
   "image/jpeg",
@@ -72,60 +76,39 @@ export const onObjectFinalizedOptimizeImages = onObjectFinalized(
           height,
         } = await compressImage(filePath);
 
-        await db.runTransaction(async (transaction) => {
-          const docRef = db.doc(`events/${eventId}`);
-          const doc = await transaction.get(docRef);
-          if (!doc.exists) {
-            logger.warn(`Event ${eventId} does not exist, skipping.`);
-            return;
-          }
-
-          const currentMedia = doc.data()?.media || [];
-          const targetIndex = currentMedia.findIndex(
-            (item: {data: {path: string}}) => item.data.path === filePath,
-          );
-
-          if (targetIndex === -1) {
-            logger.warn(`No media item found for path: ${filePath}, skipping.`);
-            return;
-          }
-
-          const mediaDataWithoutTemporaryUrl = {
-            ...currentMedia[targetIndex].data,
-          };
-          delete mediaDataWithoutTemporaryUrl.temporaryUrl;
-
-          currentMedia[targetIndex].data = {
-            ...mediaDataWithoutTemporaryUrl,
-            url: publicUrl,
-            width,
-            height,
-            path: compressedPath,
-            originalPath: filePath,
-            status: "ready",
-          };
-
-          transaction.update(docRef, {media: currentMedia});
+        await patchEventMedia({
+          db,
+          eventId,
+          filePath,
+          uploadedAt: new Date(event.data.timeCreated ?? Date.now()),
+          patch: (data) => {
+            const next = {...data};
+            delete next.temporaryUrl;
+            return {
+              ...next,
+              url: publicUrl,
+              width,
+              height,
+              path: compressedPath,
+              originalPath: filePath,
+              status: "ready",
+            };
+          },
         });
       } catch (error) {
+        // El item aún no está en Firestore: reintentar sin marcarlo como error.
+        if (error instanceof MediaNotPersistedError) throw error;
         logger.error(
           `Error processing gallery media for event ${eventId}:`,
           error,
         );
-        await db.runTransaction(async (transaction) => {
-          const docRef = db.doc(`events/${eventId}`);
-          const doc = await transaction.get(docRef);
-          if (!doc.exists) return;
-
-          const currentMedia = doc.data()?.media || [];
-          const targetIndex = currentMedia.findIndex(
-            (item: {data: {path: string}}) => item.data.path === filePath,
-          );
-
-          if (targetIndex !== -1) {
-            currentMedia[targetIndex].data.status = "error";
-            transaction.update(docRef, {media: currentMedia});
-          }
+        await patchEventMedia({
+          db,
+          eventId,
+          filePath,
+          uploadedAt: new Date(event.data.timeCreated ?? Date.now()),
+          patch: (data) => ({...data, status: "error"}),
+          retryIfMissing: false,
         });
 
         throw error;

@@ -7,6 +7,10 @@ import {bucket, db} from "../../config/firebase";
 import {processVideo} from "../../modules/events/helpers/processVideo";
 import {extractThumbnail} from "../../modules/events/helpers/extractThumbnail";
 import {STORAGE_BUCKET} from "../../config/bucket";
+import {
+  patchEventMedia,
+  MediaNotPersistedError,
+} from "../../modules/events/helpers/patchEventMedia";
 
 const VALID_CONTENT_TYPES = [
   "video/mp4",
@@ -110,70 +114,42 @@ export const onObjectFinalizedOptimizeVideos = onObjectFinalized(
         logger.warn("Thumbnail could not be uploaded, continuing...");
       }
 
-      let mediaFound = false;
-
-      await db.runTransaction(async (transaction) => {
-        const docRef = db.doc(`events/${eventId}`);
-        const doc = await transaction.get(docRef);
-        if (!doc.exists) {
-          logger.warn(`Event ${eventId} does not exist, skipping.`);
-          return;
-        }
-
-        const currentMedia = doc.data()?.media || [];
-
-        const targetIndex = currentMedia.findIndex(
-          (item: {data: {path: string}}) => item.data.path === filePath,
-        );
-
-        if (targetIndex === -1) {
-          logger.warn(`No media item found for path: ${filePath}, skipping.`);
-          return;
-        }
-
-        mediaFound = true;
-
-        const mediaDataWithoutTemporaryUrl = {
-          ...currentMedia[targetIndex].data,
-        };
-        delete mediaDataWithoutTemporaryUrl.temporaryUrl;
-
-        currentMedia[targetIndex].data = {
-          ...mediaDataWithoutTemporaryUrl,
-          url: videoUrl,
-          path: destVideo,
-          originalPath: filePath,
-          status: "ready",
-          width,
-          height,
-          duration: Math.round(duration),
-          thumbnailUrl,
-          thumbnailPath,
-        };
-
-        transaction.update(docRef, {media: currentMedia});
+      await patchEventMedia({
+        db,
+        eventId,
+        filePath: filePath as string,
+        uploadedAt: new Date(event.data.timeCreated ?? Date.now()),
+        patch: (data) => {
+          const next = {...data};
+          delete next.temporaryUrl;
+          return {
+            ...next,
+            url: videoUrl,
+            path: destVideo,
+            originalPath: filePath,
+            status: "ready",
+            width,
+            height,
+            duration: Math.round(duration),
+            thumbnailUrl,
+            thumbnailPath,
+          };
+        },
       });
-
-      if (!mediaFound) return;
 
       logger.info(`✅ Video ready: ${videoUrl}`);
     } catch (error) {
+      // El item aún no está en Firestore: reintentar sin marcarlo como error.
+      if (error instanceof MediaNotPersistedError) throw error;
       logger.error(`❌ Error processing video: ${filePath}`, error);
 
-      await db.runTransaction(async (transaction) => {
-        const docRef = db.doc(`events/${eventId}`);
-        const doc = await transaction.get(docRef);
-        if (!doc.exists) return;
-
-        const currentMedia = doc.data()?.media || [];
-        const targetIndex = currentMedia.findIndex(
-          (item: {data: {path: string}}) => item.data.path === filePath,
-        );
-
-        if (targetIndex !== -1) {
-          currentMedia[targetIndex].data.status = "error";
-          transaction.update(docRef, {media: currentMedia});
-        }
+      await patchEventMedia({
+        db,
+        eventId,
+        filePath: filePath as string,
+        uploadedAt: new Date(event.data.timeCreated ?? Date.now()),
+        patch: (data) => ({...data, status: "error"}),
+        retryIfMissing: false,
       });
 
       throw error;
