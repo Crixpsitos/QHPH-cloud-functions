@@ -114,7 +114,7 @@ export const onObjectFinalizedOptimizeVideos = onObjectFinalized(
         logger.warn("Thumbnail could not be uploaded, continuing...");
       }
 
-      await patchEventMedia({
+      const found = await patchEventMedia({
         db,
         eventId,
         filePath: filePath as string,
@@ -137,6 +137,8 @@ export const onObjectFinalizedOptimizeVideos = onObjectFinalized(
         },
       });
 
+      if (!found) return;
+
       logger.info(`✅ Video ready: ${videoUrl}`);
     } catch (error) {
       // El item aún no está en Firestore: reintentar sin marcarlo como error.
@@ -150,7 +152,7 @@ export const onObjectFinalizedOptimizeVideos = onObjectFinalized(
         uploadedAt: new Date(event.data.timeCreated ?? Date.now()),
         patch: (data) => ({...data, status: "error"}),
         retryIfMissing: false,
-      });
+      }).catch((e) => logger.error("Could not mark media as error", e));
 
       throw error;
     } finally {

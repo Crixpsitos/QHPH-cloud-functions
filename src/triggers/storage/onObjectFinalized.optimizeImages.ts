@@ -55,6 +55,7 @@ export const onObjectFinalizedOptimizeImages = onObjectFinalized(
           "mainImage.status": "ready",
           "mainImage.temporaryUrl": FieldValue.delete(),
           "mainImage.path": compressedPath,
+          "mainImage.originalPath": filePath,
           "mainImage.url": publicUrl,
         });
       } catch (error) {
@@ -109,7 +110,7 @@ export const onObjectFinalizedOptimizeImages = onObjectFinalized(
           uploadedAt: new Date(event.data.timeCreated ?? Date.now()),
           patch: (data) => ({...data, status: "error"}),
           retryIfMissing: false,
-        });
+        }).catch((e) => logger.error("Could not mark media as error", e));
 
         throw error;
       }
