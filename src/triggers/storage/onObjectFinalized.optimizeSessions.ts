@@ -9,6 +9,10 @@ import {compressImage} from "../../modules/events/helpers/compressImage";
 import {processVideo} from "../../modules/events/helpers/processVideo";
 import {extractThumbnail} from "../../modules/events/helpers/extractThumbnail";
 import {STORAGE_BUCKET} from "../../config/bucket";
+import {
+  patchEventMedia,
+  MediaNotPersistedError,
+} from "../../modules/events/helpers/patchEventMedia";
 
 /**
  * Optimizadores de media para SESIONES de eventos multi-fecha.
@@ -39,6 +43,9 @@ const VALID_VIDEO_TYPES = [
   "video/3gpp",
 ];
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type MediaData = Record<string, any>;
+
 interface SessionPathInfo {
   sessionId: string;
   fileName: string;
@@ -68,6 +75,30 @@ function parseSessionPath(filePath: string | undefined): SessionPathInfo | null 
   if (!isMain && !isMedia) return null;
 
   return {sessionId, fileName, isMain, isMedia};
+}
+
+/**
+ * Parchea (con reintento si el item aún no existe) el item de media de la sesión.
+ * @param {object} o ids, ruta del archivo, hora de subida y parche
+ * @return {Promise<boolean>} true si encontró y actualizó el item
+ */
+function patchSessionMedia(o: {
+  eventId: string;
+  sessionId: string;
+  filePath: string;
+  uploadedAt?: string | Date;
+  patch: (data: MediaData) => MediaData;
+  retryIfMissing?: boolean;
+}): Promise<boolean> {
+  return patchEventMedia({
+    db,
+    eventId: o.eventId,
+    docPath: `events/${o.eventId}/sessions/${o.sessionId}`,
+    filePath: o.filePath,
+    uploadedAt: new Date(o.uploadedAt ?? Date.now()),
+    patch: o.patch,
+    retryIfMissing: o.retryIfMissing,
+  });
 }
 
 /**
@@ -149,6 +180,7 @@ export const optimizeSessionImages = onObjectFinalized(
           "mainImage.status": "ready",
           "mainImage.temporaryUrl": FieldValue.delete(),
           "mainImage.path": compressedPath,
+          "mainImage.originalPath": filePath,
           "mainImage.url": publicUrl,
         });
       } catch (error) {
@@ -167,10 +199,12 @@ export const optimizeSessionImages = onObjectFinalized(
       const {publicUrl, path: compressedPath, width, height} =
         await compressImage(filePath as string);
 
-      await patchSessionMediaByPath(
-        sessionRef,
-        filePath as string,
-        (data) => {
+      await patchSessionMedia({
+        eventId,
+        sessionId,
+        filePath: filePath as string,
+        uploadedAt: event.data.timeCreated,
+        patch: (data) => {
           const next = {...data};
           delete next.temporaryUrl;
           return {
@@ -183,10 +217,19 @@ export const optimizeSessionImages = onObjectFinalized(
             status: "ready",
           };
         },
-      );
+      });
     } catch (error) {
+      // El item aún no está en Firestore: reintentar sin marcarlo como error.
+      if (error instanceof MediaNotPersistedError) throw error;
       logger.error(`Error optimizing session gallery ${sessionId}:`, error);
-      await markSessionMediaError(sessionRef, filePath as string);
+      await patchSessionMedia({
+        eventId,
+        sessionId,
+        filePath: filePath as string,
+        uploadedAt: event.data.timeCreated,
+        patch: (data) => ({...data, status: "error"}),
+        retryIfMissing: false,
+      }).catch((e) => logger.error("Could not mark media as error", e));
       throw error;
     }
   },
@@ -223,7 +266,6 @@ export const optimizeSessionVideos = onObjectFinalized(
       return;
     }
 
-    const sessionRef = db.doc(`events/${eventId}/sessions/${sessionId}`);
     logger.info(`Processing session video: ${filePath}`);
 
     const tempDir = os.tmpdir();
@@ -287,10 +329,12 @@ export const optimizeSessionVideos = onObjectFinalized(
         logger.warn("Thumbnail could not be uploaded, continuing...");
       }
 
-      const found = await patchSessionMediaByPath(
-        sessionRef,
-        filePath as string,
-        (data) => {
+      const found = await patchSessionMedia({
+        eventId,
+        sessionId,
+        filePath: filePath as string,
+        uploadedAt: event.data.timeCreated,
+        patch: (data) => {
           const next = {...data};
           delete next.temporaryUrl;
           return {
@@ -306,12 +350,21 @@ export const optimizeSessionVideos = onObjectFinalized(
             thumbnailPath,
           };
         },
-      );
+      });
 
       if (found) logger.info(`✅ Session video ready: ${videoUrl}`);
     } catch (error) {
+      // El item aún no está en Firestore: reintentar sin marcarlo como error.
+      if (error instanceof MediaNotPersistedError) throw error;
       logger.error(`❌ Error processing session video: ${filePath}`, error);
-      await markSessionMediaError(sessionRef, filePath as string);
+      await patchSessionMedia({
+        eventId,
+        sessionId,
+        filePath: filePath as string,
+        uploadedAt: event.data.timeCreated,
+        patch: (data) => ({...data, status: "error"}),
+        retryIfMissing: false,
+      }).catch((e) => logger.error("Could not mark media as error", e));
       throw error;
     } finally {
       // eslint-disable-next-line
@@ -320,58 +373,3 @@ export const optimizeSessionVideos = onObjectFinalized(
     }
   },
 );
-
-// ── Helpers de media (galería) ────────────────────────────────────────────────
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type MediaData = Record<string, any>;
-
-/**
- * Actualiza en transacción el item de `media` cuyo `data.path` coincide.
- * @param {FirebaseFirestore.DocumentReference} ref doc de la sesión
- * @param {string} matchPath path del storage a matchear
- * @param {Function} patch actualizador de `item.data`
- * @return {Promise<boolean>} true si encontró y actualizó el item
- */
-async function patchSessionMediaByPath(
-  ref: FirebaseFirestore.DocumentReference,
-  matchPath: string,
-  patch: (data: MediaData) => MediaData,
-): Promise<boolean> {
-  let found = false;
-  await db.runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
-    if (!snap.exists) {
-      logger.warn(`Session doc ${ref.path} does not exist, skipping.`);
-      return;
-    }
-    const media = snap.data()?.media ?? [];
-    const i = media.findIndex(
-      (item: {data: {path: string}}) => item.data?.path === matchPath,
-    );
-    if (i === -1) {
-      logger.warn(`No session media for path: ${matchPath}, skipping.`);
-      return;
-    }
-    found = true;
-    media[i].data = patch(media[i].data);
-    tx.update(ref, {media});
-  });
-  return found;
-}
-
-/**
- * Marca como "error" el item de media cuyo `data.path` coincide.
- * @param {FirebaseFirestore.DocumentReference} ref doc de la sesión
- * @param {string} matchPath path del storage a matchear
- * @return {Promise<void>}
- */
-async function markSessionMediaError(
-  ref: FirebaseFirestore.DocumentReference,
-  matchPath: string,
-): Promise<void> {
-  await patchSessionMediaByPath(ref, matchPath, (data) => ({
-    ...data,
-    status: "error",
-  }));
-}

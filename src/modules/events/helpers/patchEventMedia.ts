@@ -25,6 +25,8 @@ type MediaItem = {id?: string; data: Record<string, unknown>};
 interface Options {
   db: Db;
   eventId: string;
+  /** Documento con `media[]`; por defecto `events/{eventId}` (sesiones: `events/{e}/sessions/{s}`). */
+  docPath?: string;
   filePath: string;
   /** `timeCreated` del objeto en Storage. */
   uploadedAt: Date;
@@ -45,7 +47,7 @@ export async function patchEventMedia(o: Options): Promise<boolean> {
   const now = o.now ?? Date.now;
 
   const found = await db.runTransaction(async (tx) => {
-    const ref = db.doc(`events/${eventId}`);
+    const ref = db.doc(o.docPath ?? `events/${eventId}`);
     const snap = await tx.get(ref);
     const media = snap.exists ? (snap.data()?.media ?? []) : [];
     const i = media.findIndex((m) => m.data?.path === filePath);

@@ -12,8 +12,12 @@ type Doc = {media: {id: string; data: Record<string, unknown>}[]} | null;
 // Firestore falso en memoria: un solo documento y transacción trivial.
 const fakeDb = (doc: Doc) => {
   const writes: unknown[] = [];
+  const paths: string[] = [];
   const db = {
-    doc: (p: string) => p,
+    doc: (p: string) => {
+      paths.push(p);
+      return p;
+    },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     runTransaction: async <T>(fn: (tx: any) => Promise<T>) =>
       fn({
@@ -21,7 +25,7 @@ const fakeDb = (doc: Doc) => {
         update: (_ref: string, data: unknown) => writes.push(data),
       }),
   };
-  return {db, writes};
+  return {db, writes, paths};
 };
 
 const NOW = Date.parse("2026-11-05T12:00:00Z");
@@ -74,4 +78,21 @@ test("retryIfMissing:false (marcar error) nunca lanza aunque el objeto sea joven
     patch: ready, retryIfMissing: false, now: () => NOW,
   });
   assert.equal(found, false);
+});
+
+test("docPath apunta a otro documento (sesiones: events/{e}/sessions/{s})", async () => {
+  const {db, paths} = fakeDb({media: [item("p/a")]});
+  await patchEventMedia({
+    db, eventId: "E", docPath: "events/E/sessions/S", filePath: "p/a",
+    uploadedAt: new Date(NOW), patch: ready, now: () => NOW,
+  });
+  assert.deepEqual(paths, ["events/E/sessions/S"]);
+});
+
+test("sin docPath usa events/{eventId}", async () => {
+  const {db, paths} = fakeDb({media: [item("p/a")]});
+  await patchEventMedia({
+    db, eventId: "E", filePath: "p/a", uploadedAt: new Date(NOW), patch: ready, now: () => NOW,
+  });
+  assert.deepEqual(paths, ["events/E"]);
 });
