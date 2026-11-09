@@ -5,6 +5,7 @@ import {SCORE_RELEVANT_FIELDS} from "../../../const/SCORE_RELEVANT_FIELDS";
 import {calculateTrendingScore} from "../../../utils/calculateTrendingScore";
 import {logger} from "firebase-functions";
 import type {Events} from "../../../types/event/Event";
+import {buildScoreUpdate} from "../helpers/scoreUpdate";
 
 export const recalculateScoreAnalitycs = onDocumentWritten(
   {
@@ -56,7 +57,7 @@ export const recalculateScoreAnalitycs = onDocumentWritten(
         return v;
       };
 
-      const relevantChanged = SCORE_RELEVANT_FIELDS.some((field) => {
+      const changedFields = SCORE_RELEVANT_FIELDS.filter((field) => {
         const beforeValue = normalize(getNestedValue(before ?? {}, field));
         const afterValue = normalize(getNestedValue(after ?? {}, field));
         const changed = beforeValue !== afterValue;
@@ -72,7 +73,7 @@ export const recalculateScoreAnalitycs = onDocumentWritten(
         return changed;
       });
 
-      if (!relevantChanged) {
+      if (changedFields.length === 0) {
         logger.info(
           "[recalculateScoreAnalitycs] Ningún campo relevante cambió, finalizando",
         );
@@ -110,11 +111,7 @@ export const recalculateScoreAnalitycs = onDocumentWritten(
           "[recalculateScoreAnalitycs] Actualizando documento con score:",
           {score},
         );
-        await eventRef.update({
-          "analytics.score": score,
-          "updatedAt": Timestamp.now(),
-          "metadata._meiliNeedsSync": true,
-        });
+        await eventRef.update(buildScoreUpdate(score, changedFields, Timestamp.now()));
         return;
       }
 
@@ -130,11 +127,7 @@ export const recalculateScoreAnalitycs = onDocumentWritten(
         "[recalculateScoreAnalitycs] Actualizando documento con score:",
         {score},
       );
-      await eventRef.update({
-        "analytics.score": score,
-        "updatedAt": Timestamp.now(),
-        "metadata._meiliNeedsSync": true,
-      });
+      await eventRef.update(buildScoreUpdate(score, changedFields, Timestamp.now()));
 
       logger.info(
         "[recalculateScoreAnalitycs] Trigger completado exitosamente para evento:",
