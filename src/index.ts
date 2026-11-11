@@ -53,6 +53,9 @@ import {
   recomputeSiteEvents,
 } from "./modules/sites/triggers/schedule.recomputeSiteEvents";
 import {
+  sendActivityReminders,
+} from "./modules/activities/triggers/schedule.sendActivityReminders";
+import {
   notifyEventChanges,
 } from "./modules/events/triggers/event.onWrite.notifyChanges";
 import {
@@ -88,6 +91,7 @@ export {
   optimizeProfileMedia,
   expirePremiumPlans,
   recomputeSiteEvents,
+  sendActivityReminders,
   notifyNewReport,
   recalculateScoreAnalitycs,
   aggregateSessionAnalytics,
