@@ -7,6 +7,7 @@ export const OPTIMIZABLE_FOLDERS = {
   EVENTS: "events",
   SITES: "sites",
   ACTIVITIES: "activities",
+  ACTIVITY_REVIEWS: "activityReviews",
   // Agregar más tipos aquí en el futuro
 } as const;
 
