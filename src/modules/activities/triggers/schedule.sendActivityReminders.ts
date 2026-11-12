@@ -48,7 +48,8 @@ export const sendActivityReminders = onSchedule(
       });
       logger.info("[sendActivityReminders] correo", {status: mail.status, body: await mail.json().catch(() => ({}))});
     } catch (e) {
-      logger.error("[sendActivityReminders] la corrida de correo falló", {error: e instanceof Error ? e.message : "error"});
+      const error = e instanceof Error ? e.message : "error";
+      logger.error("[sendActivityReminders] la corrida de correo falló", {error});
     }
   },
 );
