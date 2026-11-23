@@ -11,7 +11,8 @@ type Decision = "approved" | "rejected";
 type Payload =
   | {action: "moderateEvent"; eventId: string; decision: Decision; reason?: string}
   | {action: "moderateActivity"; activityId: string; decision: Decision; reason?: string}
-  | {action: "revalidate"; kind: "events" | "sites" | "activities"; id: string; authorIds?: string[]}
+  | {action: "revalidate"; kind: "events" | "sites" | "activities"; id: string; authorIds?: string[];
+    slug?: string; siteId?: string}
   | {action: "revalidateHome"}
   | {action: "revalidateConfig"; key: "holidays" | "transit"}
   | {action: "claimApprove"; claimId: string}
@@ -116,7 +117,10 @@ export const adminGateway = onCall(
       });
     case "revalidate": {
       const authorIds = (data.authorIds ?? []).slice(0, 4);
-      let body: object = {activityId: data.id, ownerIds: authorIds};
+      let body: object = {
+        activityId: data.id, ownerIds: authorIds,
+        ...(data.slug ? {slug: data.slug} : {}), ...(data.siteId ? {siteId: data.siteId} : {}),
+      };
       if (data.kind === "sites") body = {siteId: data.id, authorIds};
       if (data.kind === "events") body = {eventId: data.id, authorIds};
       return post(`/api/${data.kind}/revalidate`, revalidateSecret.value(), body);
