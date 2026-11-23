@@ -86,7 +86,10 @@ setGlobalOptions({maxInstances: 10});
 //   response.send("Hello from Firebase!");
 // });
 
+import {adminGateway} from "./modules/admin/adminGateway";
+
 export {
+  adminGateway,
   syncUserPreference,
   optimizeProfileMedia,
   expirePremiumPlans,
