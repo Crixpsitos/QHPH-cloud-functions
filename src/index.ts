@@ -87,9 +87,17 @@ setGlobalOptions({maxInstances: 10});
 // });
 
 import {adminGateway} from "./modules/admin/adminGateway";
+import {
+  notifyNewContact,
+  notifyNewSupportTicket,
+  notifyNewSiteClaim,
+} from "./modules/admin/triggers/notifyInbox";
 
 export {
   adminGateway,
+  notifyNewContact,
+  notifyNewSupportTicket,
+  notifyNewSiteClaim,
   syncUserPreference,
   optimizeProfileMedia,
   expirePremiumPlans,
